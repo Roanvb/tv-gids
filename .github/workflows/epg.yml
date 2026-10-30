@@ -1,0 +1,25 @@
+name: Bouw NL-gids
+on:
+  schedule:
+    - cron: "17 3 * * *"      # elke nacht 03:17 UTC (04:17/05:17 NL)
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bouw gidsbestand
+        env:
+          EPG_PROVIDER_URL: ${{ secrets.EPG_PROVIDER_URL }}
+        run: python3 -I epg_merge.py work work/epg_nl_merged.xml.gz
+      - name: Publiceer als release "latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest >/dev/null 2>&1 || gh release create latest --title "NL-gids (automatisch)" --notes "Wordt elke nacht opnieuw gebouwd."
+          gh release upload latest work/epg_nl_merged.xml.gz --clobber
